@@ -5,7 +5,7 @@ defmodule TetrisScenic.Scene.Tetris do
   import Scenic.Primitives, only: [rect: 3, text: 3]
 
   @graph Graph.build(font: :roboto, font_size: 36)
-  @frame_ms 500
+  @frame_ms 100
 
   def init(args, opts) do
 
@@ -19,7 +19,7 @@ defmodule TetrisScenic.Scene.Tetris do
       graph: @graph,
       frame_count: 1,
       frame_timer: timer,
-      board_heigth: vp_height,
+      board_height: vp_height,
       board_width: vp_width,
       moving_block: %{
         x: vp_width / 2,
@@ -31,16 +31,17 @@ defmodule TetrisScenic.Scene.Tetris do
 
     graph = state.graph
             |> draw_blocks(state.blocks)
-            |> draw_moving_block(state.moving_block)
+            |> draw_block(state.moving_block)
 
     {:ok, state, push: graph}
   end
 
 
   defp draw_blocks(graph, blocks) do
+    Enum.reduce(blocks, graph, fn block, graph -> draw_block(graph, block) end)
   end
 
-  defp draw_moving_block(graph, block) do
+  defp draw_block(graph, block) do
     graph
     |> rect({block.size, block.size}, fill: :red, translate: {block.x, block.y})
   end
@@ -50,15 +51,31 @@ defmodule TetrisScenic.Scene.Tetris do
 
     graph = state.graph
             |> draw_blocks(state.blocks)
+            |> draw_block(state.moving_block)
 
     {:noreply, %{state | frame_count: frame_count + 1}, push: graph}
   end
 
   defp move_block(state) do
     block_size = state.moving_block.size
-    new_pos = min(state.moving_block.y + block_size, state.board_heigth - block_size)
-    state
-    |> put_in([:blocks, :moving_block, :y], new_pos)
+    new_pos = min(state.moving_block.y + block_size, state.board_height - block_size)
+
+    cond do
+      new_pos == state.board_height - block_size ->
+        state
+        |> put_in([:blocks], [put_in(state.moving_block, [:y], new_pos) | state.blocks])
+        |> put_in(
+             [:moving_block],
+             %{
+               x: 500 / 2,
+               y: 0,
+               size: 500 / 10
+             }
+           )
+      true ->
+        state
+        |> put_in([:moving_block, :y], new_pos)
+    end
   end
 
 end
