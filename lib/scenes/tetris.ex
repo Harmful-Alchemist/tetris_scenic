@@ -21,24 +21,23 @@ defmodule TetrisScenic.Scene.Tetris do
       frame_timer: timer,
       board_heigth: vp_height,
       board_width: vp_width,
-      blocks: %{
-        moving_block: %{
-          x: vp_width / 2,
-          y: 0,
-          size: vp_width / 10
-        }
-      }
+      moving_block: %{
+        x: vp_width / 2,
+        y: 0,
+        size: vp_width / 10
+      },
+      blocks: []
     }
 
     graph = state.graph
             |> draw_blocks(state.blocks)
+            |> draw_moving_block(state.moving_block)
 
     {:ok, state, push: graph}
   end
 
 
   defp draw_blocks(graph, blocks) do
-    draw_moving_block(graph, blocks.moving_block)
   end
 
   defp draw_moving_block(graph, block) do
@@ -56,8 +55,8 @@ defmodule TetrisScenic.Scene.Tetris do
   end
 
   defp move_block(state) do
-    block_size = state.blocks.moving_block.size
-    new_pos = min(state.blocks.moving_block.y + block_size, state.board_heigth - block_size)
+    block_size = state.moving_block.size
+    new_pos = min(state.moving_block.y + block_size, state.board_heigth - block_size)
     state
     |> put_in([:blocks, :moving_block, :y], new_pos)
   end
