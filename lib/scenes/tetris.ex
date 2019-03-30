@@ -5,7 +5,7 @@ defmodule TetrisScenic.Scene.Tetris do
   import Scenic.Primitives, only: [rect: 3, text: 3]
 
   @graph Graph.build(font: :roboto, font_size: 36)
-  @frame_ms 100
+  @frame_ms 200
 
   def init(args, opts) do
 
@@ -67,9 +67,9 @@ defmodule TetrisScenic.Scene.Tetris do
         |> put_in(
              [:moving_block],
              %{
-               x: 500 / 2,
+               x: state.board_width / 2,
                y: 0,
-               size: 500 / 10
+               size: state.board_width / 10
              }
            )
       true ->
@@ -77,5 +77,33 @@ defmodule TetrisScenic.Scene.Tetris do
         |> put_in([:moving_block, :y], new_pos)
     end
   end
+
+  def handle_input({:key, {"left", :press, _}}, _context, state) do
+    {:noreply, move_block(state, state.moving_block.x - state.board_width / 10)}
+  end
+
+  def handle_input({:key, {"right", :press, _}}, _context, state) do
+    {:noreply, move_block(state, state.moving_block.x + state.board_width / 10)}
+  end
+
+  def handle_input({:key, {"down", :press, _}}, _context, state) do
+    cond do
+      state.moving_block.y < state.board_height ->
+        {:noreply, put_in(state, [:moving_block, :y],state.moving_block.y + state.board_height / 20)}
+      true ->
+        state
+    end
+  end
+
+  defp move_block(state, pos) do
+    cond do
+      pos < state.board_width && pos >= 0 ->
+        put_in(state, [:moving_block, :x], pos)
+      true ->
+        state
+    end
+  end
+
+  def handle_input(_input, _context, state), do: {:noreply, state}
 
 end
