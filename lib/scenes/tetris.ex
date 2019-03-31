@@ -47,13 +47,25 @@ defmodule TetrisScenic.Scene.Tetris do
   end
 
   def handle_info(:frame, %{frame_count: frame_count} = state) do
-    state = move_block(state)
+    state = stae
+            |> move_block
+            |> delete_row?
 
     graph = state.graph
             |> draw_blocks(state.blocks)
             |> draw_block(state.moving_block)
 
     {:noreply, %{state | frame_count: frame_count + 1}, push: graph}
+  end
+
+  defp delete_row?(state) do
+    put_in(
+      state,
+      [:blocks],
+      state.blocks
+      |> Enum.group_by(&(&1.x))
+      |> Enum.filter(&(!length(Map.values(&1)) == 10))
+    )
   end
 
   defp move_block(state) do
