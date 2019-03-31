@@ -5,9 +5,9 @@ defmodule TetrisScenic.Scene.Tetris do
   import Scenic.Primitives, only: [rect: 3, text: 3]
 
   @graph Graph.build(font: :roboto, font_size: 36)
-  @frame_ms 200
+  @frame_ms 500
 
-  def init(args, opts) do
+  def init(_args, opts) do
 
     viewport = opts[:viewport]
 
@@ -61,7 +61,7 @@ defmodule TetrisScenic.Scene.Tetris do
     new_pos = min(state.moving_block.y + block_size, state.board_height - block_size)
 
     cond do
-      new_pos == state.board_height - block_size ->
+      stop?(state, new_pos, block_size) ->
         state
         |> put_in([:blocks], [put_in(state.moving_block, [:y], new_pos) | state.blocks])
         |> put_in(
@@ -78,32 +78,55 @@ defmodule TetrisScenic.Scene.Tetris do
     end
   end
 
+  defp stop?(state, new_pos, block_size) do
+    new_pos >= state.board_height - block_size || !(
+      state.blocks
+      |> Stream.filter(&(&1.y == new_pos + block_size))
+      |> Stream.filter(&(&1.x == state.moving_block.x))
+      |> Enum.empty?)
+  end
+
   def handle_input({:key, {"left", :press, _}}, _context, state) do
-    {:noreply, move_block(state, state.moving_block.x - state.board_width / 10)}
+    new_state = move_block(state, state.moving_block.x - state.board_width / 10)
+    graph = new_state.graph
+            |> draw_blocks(state.blocks)
+            |> draw_block(state.moving_block)
+    {:noreply, new_state, push: graph}
   end
 
   def handle_input({:key, {"right", :press, _}}, _context, state) do
-    {:noreply, move_block(state, state.moving_block.x + state.board_width / 10)}
-  end
+    new_state = move_block(state, state.moving_block.x + state.board_width / 10)
+    graph = new_state.graph
+            |> draw_blocks(state.blocks)
+            |> draw_block(state.moving_block)
+    {:noreply, new_state, push: graph}  end
 
   def handle_input({:key, {"down", :press, _}}, _context, state) do
-    cond do
-      state.moving_block.y < state.board_height ->
-        {:noreply, put_in(state, [:moving_block, :y],state.moving_block.y + state.board_height / 20)}
-      true ->
-        state
-    end
+    #    cond do
+    #      state.moving_block.y < state.board_height ->
+    new_state = move_block(state)
+    graph = new_state.graph
+            |> draw_blocks(state.blocks)
+            |> draw_block(state.moving_block)
+    {:noreply, new_state, push: graph}
+    #      true ->
+    #        {:noreply, state}
+    #    end
   end
+
+  def handle_input(_input, _context, state), do: {:noreply, state}
 
   defp move_block(state, pos) do
     cond do
-      pos < state.board_width && pos >= 0 ->
+      pos < state.board_width && pos >= 0 && state.blocks
+                                             |> Stream.filter(&(&1.y == state.moving_block.y))
+                                             |> Stream.filter(&(&1.x == pos))
+                                             |> Enum.empty?
+      ->
         put_in(state, [:moving_block, :x], pos)
       true ->
         state
     end
   end
-
-  def handle_input(_input, _context, state), do: {:noreply, state}
 
 end
