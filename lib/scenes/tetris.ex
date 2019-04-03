@@ -47,25 +47,62 @@ defmodule TetrisScenic.Scene.Tetris do
   end
 
   def handle_info(:frame, %{frame_count: frame_count} = state) do
-    state = stae
-            |> move_block
-            |> delete_row?
+    new_state = state
+                |> move_block
+                |> delete_full_row
 
-    graph = state.graph
-            |> draw_blocks(state.blocks)
-            |> draw_block(state.moving_block)
+    graph = new_state.graph
+            |> draw_blocks(new_state.blocks)
+            |> draw_block(new_state.moving_block)
 
-    {:noreply, %{state | frame_count: frame_count + 1}, push: graph}
+    {:noreply, %{new_state | frame_count: frame_count + 1}, push: graph}
   end
 
-  defp delete_row?(state) do
-    put_in(
-      state,
-      [:blocks],
+  defp delete_full_row(state) do
+
+    new_blocks =
       state.blocks
-      |> Enum.group_by(&(&1.x))
-      |> Enum.filter(&(!length(Map.values(&1)) == 10))
-    )
+      |> Enum.group_by(&(&1.y))
+      |> Enum.map(fn {key, list} -> list end)
+      |> Enum.filter(&(length(&1) != 10))
+      |> Enum.flat_map(&(&1))
+
+    new_state = put_in(state, [:blocks], new_blocks)
+    cond do
+      length(new_blocks) < length(state.blocks) ->
+        new_blocks
+        |> Enum.sort_by(&(&1.y))
+        |> Enum.reverse
+        |> move_down(new_state)
+      true ->
+        state
+    end
+
+  end
+
+  defp move_down([block | tail], state) do
+    new_state = put_in(state, [:blocks], List.delete(state.blocks, block))
+
+    blocks_below = Enum.filter(new_state.blocks, &(&1.x == block.x))
+
+    new_state = cond do
+      !(blocks_below |> Enum.empty?) ->
+        highest_block = blocks_below
+                        |> Enum.sort_by(&(&1.y))
+                        |> hd
+        put_in(new_state, [:blocks], [put_in(block, [:y], highest_block.y + block.size) | new_state.blocks])
+#      block.y >= state.board_height - block.size ->
+#        put_in(new_state, [:blocks], [put_in(block, [:y], state.board_height - block.size) | new_state.blocks])
+      true ->
+        put_in(new_state, [:blocks], [put_in(block, [:y], state.board_height - block.size) | new_state.blocks])
+
+
+    end
+    move_down(tail, new_state)
+  end
+
+  defp move_down([], state) do
+    state
   end
 
   defp move_block(state) do
@@ -99,7 +136,7 @@ defmodule TetrisScenic.Scene.Tetris do
   end
 
   def handle_input({:key, {"left", :press, _}}, _context, state) do
-    new_state = move_block(state, state.moving_block.x - state.board_width / 10)
+    new_state = move_block(state, state.moving_block.x - state.board_width / 10) |> delete_full_row
     graph = new_state.graph
             |> draw_blocks(state.blocks)
             |> draw_block(state.moving_block)
@@ -107,23 +144,18 @@ defmodule TetrisScenic.Scene.Tetris do
   end
 
   def handle_input({:key, {"right", :press, _}}, _context, state) do
-    new_state = move_block(state, state.moving_block.x + state.board_width / 10)
+    new_state = move_block(state, state.moving_block.x + state.board_width / 10) |> delete_full_row
     graph = new_state.graph
             |> draw_blocks(state.blocks)
             |> draw_block(state.moving_block)
     {:noreply, new_state, push: graph}  end
 
   def handle_input({:key, {"down", :press, _}}, _context, state) do
-    #    cond do
-    #      state.moving_block.y < state.board_height ->
-    new_state = move_block(state)
+    new_state = move_block(state) |> delete_full_row
     graph = new_state.graph
             |> draw_blocks(state.blocks)
             |> draw_block(state.moving_block)
     {:noreply, new_state, push: graph}
-    #      true ->
-    #        {:noreply, state}
-    #    end
   end
 
   def handle_input(_input, _context, state), do: {:noreply, state}
