@@ -33,7 +33,164 @@ defmodule TetrisScenic.Scene.Tetris do
         size: @vp_width / 10,
         color: :red
       }
+    ],
+    [
+      %{
+        x: @vp_width / 2,
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :green
+      },
+          %{
+            x: @vp_width / 2 - @vp_width / 10,
+            y: -@vp_width / 10,
+            size: @vp_width / 10,
+            color: :green
+          },
+          %{
+            x: @vp_width / 2 + @vp_width / 10,
+            y: 0,
+            size: @vp_width / 10,
+            color: :green
+          },
+      %{
+        x: @vp_width / 2,
+        y: 0,
+        size: @vp_width / 10,
+        color: :green
+      }
+    ],
+    [
+      %{
+        x: @vp_width / 2,
+        y: 0,
+        size: @vp_width / 10,
+        color: :yellow
+      },
+      %{
+        x: @vp_width / 2 - @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :yellow
+      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :yellow
+      },
+      %{
+        x: @vp_width / 2 - (@vp_width / 10),
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :yellow
+      }
+    ],
+    [
+      %{
+        x: @vp_width / 2,
+        y: 0,
+        size: @vp_width / 10,
+        color: :orange
+      },
+      %{
+        x: @vp_width / 2 - @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :orange
+      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :orange
+      },
+      %{
+        x: @vp_width / 2 + (@vp_width / 10),
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :orange
+      }
+    ],
+    [
+      %{
+        x: @vp_width / 2,
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :blue
+      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :blue
+      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :blue
+      },
+      %{
+        x: @vp_width / 2,
+        y: 0,
+        size: @vp_width / 10,
+        color: :blue
+      }
+    ],
+    [
+      %{
+        x: @vp_width / 2 + @vp_width /10,
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :purple
+      },
+      %{
+        x: @vp_width / 2 + (2 * @vp_width / 10),
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :purple
+      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :purple
+      },
+      %{
+        x: @vp_width / 2,
+        y: 0,
+        size: @vp_width / 10,
+        color: :purple
+      }
+    ],
+    [
+      %{
+        x: @vp_width / 2,
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :pink
+      },
+      %{
+        x: @vp_width / 2 - @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :pink
+      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :pink
+      },
+      %{
+        x: @vp_width / 2,
+        y: 0,
+        size: @vp_width / 10,
+        color: :pink
+      }
     ]
+
   ]
 
   def init(_args, opts) do
