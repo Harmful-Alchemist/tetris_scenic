@@ -51,7 +51,7 @@ defmodule TetrisScenic.Scene.Tetris do
     }
 
     graph = state.graph
-            |> draw_blocks(Enum.flat_map(state.blocks, &(&1)))
+            |> draw_blocks(state.blocks)
             |> draw_blocks(state.moving_blocks)
 
     {:ok, state, push: graph}
@@ -73,7 +73,7 @@ defmodule TetrisScenic.Scene.Tetris do
                 |> delete_full_row
 
     graph = new_state.graph
-            |> draw_blocks(Enum.flat_map(new_state.blocks, &(&1)))
+            |> draw_blocks(new_state.blocks)
             |> draw_blocks(new_state.moving_blocks)
 
     {:noreply, %{new_state | frame_count: frame_count + 1}, push: graph}
@@ -82,7 +82,6 @@ defmodule TetrisScenic.Scene.Tetris do
   defp delete_full_row(state) do
     new_blocks =
       state.blocks
-      |> Enum.flat_map(&(&1))
       |> Enum.group_by(&(&1.y))
       |> Enum.map(fn {_key, list} -> list end)
       |> Enum.filter(&(length(&1) != 10))
@@ -117,7 +116,7 @@ defmodule TetrisScenic.Scene.Tetris do
 
 
     end
-    move_all_down(tail, newer_state)
+    move_down(tail, newer_state)
   end
 
   defp move_all_down([], state) do
@@ -129,7 +128,7 @@ defmodule TetrisScenic.Scene.Tetris do
     cond do
       any_stop?(new_state) ->
         state
-        |> put_in([:blocks], [state.moving_blocks | state.blocks])
+        |> put_in([:blocks], (state.moving_blocks ++ state.blocks))
         |> put_in(
              [:moving_blocks],
              Enum.random(@tetriminos)
@@ -160,7 +159,7 @@ defmodule TetrisScenic.Scene.Tetris do
     new_state = move_sideways(state, fn x -> x - state.board_width / 10 end)
                 |> delete_full_row
     graph = new_state.graph
-            |> draw_blocks(Enum.flat_map(state.blocks, &(&1)))
+            |> draw_blocks(state.blocks)
             |> draw_blocks(state.moving_blocks)
     {:noreply, new_state, push: graph}
   end
@@ -169,7 +168,7 @@ defmodule TetrisScenic.Scene.Tetris do
     new_state = move_sideways(state, fn x -> x + state.board_width / 10 end)
                 |> delete_full_row
     graph = new_state.graph
-            |> draw_blocks(Enum.flat_map(state.blocks, &(&1)))
+            |> draw_blocks(state.blocks)
             |> draw_blocks(state.moving_blocks)
     {:noreply, new_state, push: graph}  end
 
@@ -177,7 +176,7 @@ defmodule TetrisScenic.Scene.Tetris do
     new_state = move_block(state)
                 |> delete_full_row
     graph = new_state.graph
-            |> draw_blocks(Enum.flat_map(state.blocks, &(&1)))
+            |> draw_blocks(state.blocks)
             |> draw_blocks(state.moving_blocks)
     {:noreply, new_state, push: graph}
   end
@@ -203,7 +202,6 @@ defmodule TetrisScenic.Scene.Tetris do
   defp block_on_same_x_y?(state, block) do
     Enum.member?(
       state.blocks
-      |> Enum.flat_map(&(&1))
       |> Stream.filter(&(&1.y == block.y))
       |> Stream.map(fn e -> e.x end),
       block.x
