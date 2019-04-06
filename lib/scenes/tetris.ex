@@ -6,6 +6,31 @@ defmodule TetrisScenic.Scene.Tetris do
 
   @graph Graph.build(font: :roboto, font_size: 36)
   @frame_ms 500
+  @vp_width  500 #TODO hmmmmm!
+  @tetriminos [
+    [
+#      %{
+#        x: @vp_width / 2,
+#        y: 0,
+#        size: @vp_width / 10
+#      },
+#      %{
+#        x: @vp_width / 2 - @vp_width / 10,
+#        y: 0,
+#        size: @vp_width / 10
+#      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10
+      },
+      %{
+        x: @vp_width / 2 + 2 * (@vp_width / 10),
+        y: 0,
+        size: @vp_width / 10
+      }
+    ]
+  ]
 
   def init(_args, opts) do
 
@@ -21,17 +46,13 @@ defmodule TetrisScenic.Scene.Tetris do
       frame_timer: timer,
       board_height: vp_height,
       board_width: vp_width,
-      moving_block: %{
-        x: vp_width / 2,
-        y: 0,
-        size: vp_width / 10
-      },
+      moving_blocks: Enum.random(@tetriminos),
       blocks: []
     }
 
     graph = state.graph
             |> draw_blocks(state.blocks)
-            |> draw_block(state.moving_block)
+            |> draw_blocks(state.moving_blocks)
 
     {:ok, state, push: graph}
   end
@@ -53,17 +74,16 @@ defmodule TetrisScenic.Scene.Tetris do
 
     graph = new_state.graph
             |> draw_blocks(new_state.blocks)
-            |> draw_block(new_state.moving_block)
+            |> draw_blocks(new_state.moving_blocks)
 
     {:noreply, %{new_state | frame_count: frame_count + 1}, push: graph}
   end
 
   defp delete_full_row(state) do
-
     new_blocks =
       state.blocks
       |> Enum.group_by(&(&1.y))
-      |> Enum.map(fn {key, list} -> list end)
+      |> Enum.map(fn {_key, list} -> list end)
       |> Enum.filter(&(length(&1) != 10))
       |> Enum.flat_map(&(&1))
 
@@ -73,104 +93,119 @@ defmodule TetrisScenic.Scene.Tetris do
         new_blocks
         |> Enum.sort_by(&(&1.y))
         |> Enum.reverse
-        |> move_down(new_state)
+        |> move_all_down(new_state)
       true ->
         state
     end
 
   end
 
-  defp move_down([block | tail], state) do
+  defp move_all_down([block | tail], state) do
     new_state = put_in(state, [:blocks], List.delete(state.blocks, block))
 
     blocks_below = Enum.filter(new_state.blocks, &(&1.x == block.x))
 
-    new_state = cond do
+    newer_state = cond do
       !(blocks_below |> Enum.empty?) ->
         highest_block = blocks_below
                         |> Enum.sort_by(&(&1.y))
                         |> hd
-        put_in(new_state, [:blocks], [put_in(block, [:y], highest_block.y + block.size) | new_state.blocks])
-#      block.y >= state.board_height - block.size ->
-#        put_in(new_state, [:blocks], [put_in(block, [:y], state.board_height - block.size) | new_state.blocks])
+       put_in(new_state, [:blocks], [put_in(block, [:y], highest_block.y + block.size) | new_state.blocks])
       true ->
         put_in(new_state, [:blocks], [put_in(block, [:y], state.board_height - block.size) | new_state.blocks])
 
 
     end
-    move_down(tail, new_state)
+    move_down(tail, newer_state)
   end
 
-  defp move_down([], state) do
+  defp move_all_down([], state) do
     state
   end
 
   defp move_block(state) do
-    block_size = state.moving_block.size
-    new_pos = min(state.moving_block.y + block_size, state.board_height - block_size)
-
+    new_state = put_in(state, [:moving_blocks], moved_tetrimino(state))
     cond do
-      stop?(state, new_pos, block_size) ->
+      any_stop?(new_state) ->
         state
-        |> put_in([:blocks], [put_in(state.moving_block, [:y], new_pos) | state.blocks])
+        |> put_in([:blocks], (state.moving_blocks ++ state.blocks))
         |> put_in(
-             [:moving_block],
-             %{
-               x: state.board_width / 2,
-               y: 0,
-               size: state.board_width / 10
-             }
+             [:moving_blocks],
+             Enum.random(@tetriminos)
            )
       true ->
-        state
-        |> put_in([:moving_block, :y], new_pos)
+        new_state
     end
   end
 
-  defp stop?(state, new_pos, block_size) do
-    new_pos >= state.board_height - block_size || !(
-      state.blocks
-      |> Stream.filter(&(&1.y == new_pos + block_size))
-      |> Stream.filter(&(&1.x == state.moving_block.x))
+  defp moved_tetrimino(state) do
+    Enum.map(state.moving_blocks, &(put_in(&1, [:y], &1.y + &1.size)))
+  end
+
+  defp any_stop?(state) do
+    !(state.moving_blocks
+      |> Stream.filter(&(stop?(state, &1)))
       |> Enum.empty?)
   end
 
+  defp stop?(state, block) do
+    block.y + block.size > state.board_height || block.x >= state.board_width || block.x < 0 || block_on_same_x_y?(
+      state,
+      block
+    )
+  end
+
   def handle_input({:key, {"left", :press, _}}, _context, state) do
-    new_state = move_block(state, state.moving_block.x - state.board_width / 10) |> delete_full_row
+    new_state = move_sideways(state, fn x -> x - state.board_width / 10 end)
+                |> delete_full_row
     graph = new_state.graph
             |> draw_blocks(state.blocks)
-            |> draw_block(state.moving_block)
+            |> draw_blocks(state.moving_blocks)
     {:noreply, new_state, push: graph}
   end
 
   def handle_input({:key, {"right", :press, _}}, _context, state) do
-    new_state = move_block(state, state.moving_block.x + state.board_width / 10) |> delete_full_row
+    new_state = move_sideways(state, fn x -> x + state.board_width / 10 end)
+                |> delete_full_row
     graph = new_state.graph
             |> draw_blocks(state.blocks)
-            |> draw_block(state.moving_block)
+            |> draw_blocks(state.moving_blocks)
     {:noreply, new_state, push: graph}  end
 
   def handle_input({:key, {"down", :press, _}}, _context, state) do
-    new_state = move_block(state) |> delete_full_row
+    new_state = move_block(state)
+                |> delete_full_row
     graph = new_state.graph
             |> draw_blocks(state.blocks)
-            |> draw_block(state.moving_block)
+            |> draw_blocks(state.moving_blocks)
     {:noreply, new_state, push: graph}
   end
 
   def handle_input(_input, _context, state), do: {:noreply, state}
 
-  defp move_block(state, pos) do
+  defp move_sideways(state, position_func) do
+
+    new_state = put_in(
+      state,
+      [:moving_blocks],
+      Enum.map(state.moving_blocks, &(put_in(&1, [:x], position_func.(&1.x))))
+    )
+
     cond do
-      pos < state.board_width && pos >= 0 && state.blocks
-                                             |> Stream.filter(&(&1.y == state.moving_block.y))
-                                             |> Stream.filter(&(&1.x == pos))
-                                             |> Enum.empty?
-      ->
-        put_in(state, [:moving_block, :x], pos)
+      !any_stop?(new_state) ->
+        new_state
       true ->
         state
     end
+  end
+
+  defp block_on_same_x_y?(state, block) do
+    Enum.member?(
+      state.blocks
+      |> Stream.filter(&(&1.y == block.y))
+      |> Stream.map(fn e -> e.x end),
+      block.x
+    )
   end
 
 end
