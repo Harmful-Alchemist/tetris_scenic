@@ -2,32 +2,36 @@ defmodule TetrisScenic.Scene.Tetris do
   use Scenic.Scene
   alias Scenic.Graph
   alias Scenic.ViewPort
-  import Scenic.Primitives, only: [rect: 3, text: 3]
+  import Scenic.Primitives, only: [rect: 3]
 
   @graph Graph.build(font: :roboto, font_size: 36)
   @frame_ms 500
   @vp_width  500 #TODO hmmmmm!
   @tetriminos [
     [
-#      %{
-#        x: @vp_width / 2,
-#        y: 0,
-#        size: @vp_width / 10
-#      },
-#      %{
-#        x: @vp_width / 2 - @vp_width / 10,
-#        y: 0,
-#        size: @vp_width / 10
-#      },
+      %{
+        x: @vp_width / 2,
+        y: 0,
+        size: @vp_width / 10,
+        color: :red
+      },
+      %{
+        x: @vp_width / 2 - @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :red
+      },
       %{
         x: @vp_width / 2 + @vp_width / 10,
         y: 0,
-        size: @vp_width / 10
+        size: @vp_width / 10,
+        color: :red
       },
       %{
         x: @vp_width / 2 + 2 * (@vp_width / 10),
         y: 0,
-        size: @vp_width / 10
+        size: @vp_width / 10,
+        color: :red
       }
     ]
   ]
@@ -64,7 +68,7 @@ defmodule TetrisScenic.Scene.Tetris do
 
   defp draw_block(graph, block) do
     graph
-    |> rect({block.size, block.size}, fill: :red, translate: {block.x, block.y})
+    |> rect({block.size, block.size}, fill: block.color, translate: {block.x, block.y})
   end
 
   def handle_info(:frame, %{frame_count: frame_count} = state) do
@@ -80,47 +84,31 @@ defmodule TetrisScenic.Scene.Tetris do
   end
 
   defp delete_full_row(state) do
-    new_blocks =
-      state.blocks
-      |> Enum.group_by(&(&1.y))
-      |> Enum.map(fn {_key, list} -> list end)
-      |> Enum.filter(&(length(&1) != 10))
-      |> Enum.flat_map(&(&1))
 
-    new_state = put_in(state, [:blocks], new_blocks)
-    cond do
-      length(new_blocks) < length(state.blocks) ->
-        new_blocks
-        |> Enum.sort_by(&(&1.y))
-        |> Enum.reverse
-        |> move_all_down(new_state)
-      true ->
-        state
+    blocks_to_delete = state.blocks
+                       |> Enum.group_by(&(&1.y))
+                       |> Enum.map(fn {_key, list} -> list end)
+                       |> Enum.filter(&(length(&1) == 10))
+                       |> Enum.flat_map(&(&1))
+
+    if length(blocks_to_delete) > 0 do
+      new_blocks =
+        state.blocks
+        |> Enum.filter(&(!Enum.member?(blocks_to_delete, &1)))
+        |> Enum.map(&(conditionally_move_down(&1, hd(blocks_to_delete))))
+      put_in(state, [:blocks], new_blocks)
+    else
+      state
     end
 
   end
 
-  defp move_all_down([block | tail], state) do
-    new_state = put_in(state, [:blocks], List.delete(state.blocks, block))
-
-    blocks_below = Enum.filter(new_state.blocks, &(&1.x == block.x))
-
-    newer_state = cond do
-      !(blocks_below |> Enum.empty?) ->
-        highest_block = blocks_below
-                        |> Enum.sort_by(&(&1.y))
-                        |> hd
-       put_in(new_state, [:blocks], [put_in(block, [:y], highest_block.y + block.size) | new_state.blocks])
-      true ->
-        put_in(new_state, [:blocks], [put_in(block, [:y], state.board_height - block.size) | new_state.blocks])
-
-
+  defp conditionally_move_down(block_to_move, deleted_block) do
+    if block_to_move.y < deleted_block.y do
+      put_in(block_to_move, [:y], block_to_move.y + block_to_move.size)
+    else
+      block_to_move
     end
-    move_down(tail, newer_state)
-  end
-
-  defp move_all_down([], state) do
-    state
   end
 
   defp move_block(state) do
