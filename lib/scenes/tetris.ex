@@ -41,18 +41,18 @@ defmodule TetrisScenic.Scene.Tetris do
         size: @vp_width / 10,
         color: :green
       },
-          %{
-            x: @vp_width / 2 - @vp_width / 10,
-            y: -@vp_width / 10,
-            size: @vp_width / 10,
-            color: :green
-          },
-          %{
-            x: @vp_width / 2 + @vp_width / 10,
-            y: 0,
-            size: @vp_width / 10,
-            color: :green
-          },
+      %{
+        x: @vp_width / 2 - @vp_width / 10,
+        y: -@vp_width / 10,
+        size: @vp_width / 10,
+        color: :green
+      },
+      %{
+        x: @vp_width / 2 + @vp_width / 10,
+        y: 0,
+        size: @vp_width / 10,
+        color: :green
+      },
       %{
         x: @vp_width / 2,
         y: 0,
@@ -140,7 +140,7 @@ defmodule TetrisScenic.Scene.Tetris do
     ],
     [
       %{
-        x: @vp_width / 2 + @vp_width /10,
+        x: @vp_width / 2 + @vp_width / 10,
         y: -@vp_width / 10,
         size: @vp_width / 10,
         color: :purple
@@ -246,14 +246,15 @@ defmodule TetrisScenic.Scene.Tetris do
                        |> Enum.group_by(&(&1.y))
                        |> Enum.map(fn {_key, list} -> list end)
                        |> Enum.filter(&(length(&1) == 10))
-                       |> Enum.flat_map(&(&1))
+                       |> Enum.sort(&(hd(&1).y >= hd(&2).y))
+
 
     if length(blocks_to_delete) > 0 do
       new_blocks =
         state.blocks
-        |> Enum.filter(&(!Enum.member?(blocks_to_delete, &1)))
-        |> Enum.map(&(conditionally_move_down(&1, hd(blocks_to_delete))))
-      put_in(state, [:blocks], new_blocks)
+        |> Enum.filter(&(!Enum.member?(hd(blocks_to_delete), &1)))
+        |> Enum.map(&(conditionally_move_down(&1, hd(hd(blocks_to_delete)))))
+      delete_full_row(put_in(state, [:blocks], new_blocks))
     else
       state
     end
@@ -326,7 +327,38 @@ defmodule TetrisScenic.Scene.Tetris do
     {:noreply, new_state, push: graph}
   end
 
+  def handle_input({:key, {"up", :press, _}}, _context, state) do
+    new_state = rotate(state)
+                |> delete_full_row
+    graph = new_state.graph
+            |> draw_blocks(state.blocks)
+            |> draw_blocks(state.moving_blocks)
+    {:noreply, new_state, push: graph}
+  end
+
   def handle_input(_input, _context, state), do: {:noreply, state}
+
+  defp rotate(state) do
+    new_state = put_in(state, [:moving_blocks], rotate_tetromino(state.moving_blocks))
+    if any_stop?(new_state) do
+      state
+    else
+      new_state
+    end
+  end
+
+  defp rotate_tetromino(tetromino) do
+    centre_block = Enum.at(tetromino, 1)
+    [
+      put_in(Enum.at(tetromino, 0), [:x], centre_block.x)
+      |> put_in([:y], centre_block.y + centre_block.size),
+      centre_block,
+      put_in(Enum.at(tetromino, 2), [:x], centre_block.x)
+      |> put_in([:y], centre_block.y - centre_block.size),
+      put_in(Enum.at(tetromino, 3), [:x], centre_block.x)
+      |> put_in([:y], centre_block.y - 2 * centre_block.size),
+    ]
+  end
 
   defp move_sideways(state, position_func) do
 
